@@ -8,6 +8,7 @@ select{width:100%;padding:10px;border:1px solid #d1d1d6;border-radius:9px;margin
 .attach{width:42px;height:48px;border:1px solid rgba(255,255,255,.85);border-radius:14px;background:rgba(255,255,255,.7);font-size:24px;color:#6870df;cursor:pointer}.fileChip{display:inline-block;padding:5px 9px;border-radius:9px;background:#eef0ff;color:#565bd0;font-size:12px;margin-bottom:8px}
 .composer{align-items:flex-end}.composer .attach{display:grid;place-items:center;flex:0 0 46px;padding:0;font-size:20px;color:#6269dc;background:rgba(255,255,255,.78);box-shadow:0 8px 18px #74729c18}.composer textarea{min-width:0}
 .connection{margin-right:6px}
+.attachActions{display:flex;gap:6px;flex:0 0 auto}.attachActions .attach{width:42px}.composerBody{display:flex;flex-direction:column;flex:1;min-width:0}.fileChip{min-height:0;margin:0 0 5px}.fileChip:empty{display:none}
 
 .userRow{padding:10px;border-bottom:1px solid #eee}
 
