@@ -72,4 +72,17 @@ export const handler = async (event) => {
     return json(error?.code === "ATTACHMENT_TOO_LARGE" ? 413 : error?.code === "INVALID_REQUEST" ? 400 : 500, errorPayload(error));
   }
 };
-export default { handler };
+
+// Netlify's modern runtime preserves a Web Response body for streaming.
+export default async function netlifyRequest(request) {
+  const url = new URL(request.url);
+  const event = {
+    httpMethod: request.method,
+    path: url.pathname,
+    queryStringParameters: Object.fromEntries(url.searchParams.entries()),
+    body: request.method === "GET" || request.method === "HEAD" ? "" : await request.text()
+  };
+  const result = await handler(event);
+  if (result instanceof Response) return result;
+  return new Response(result.body || "", { status: result.statusCode || 200, headers: result.headers || JSON_HEADERS });
+}
