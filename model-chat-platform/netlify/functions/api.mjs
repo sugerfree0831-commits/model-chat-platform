@@ -44,6 +44,32 @@ function validate(body, raw) {
   return { baseUrl, apiKey, model, messages };
 }
 
+function keepAliveStream(body) {
+  const encoder = new TextEncoder();
+  let timer;
+  return new ReadableStream({
+    async start(controller) {
+      const reader = body.getReader();
+      timer = setInterval(() => controller.enqueue(encoder.encode(": keep-alive\\n\\n")), 4000);
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          controller.enqueue(value);
+        }
+        controller.close();
+      } catch (error) {
+        controller.error(error);
+      } finally {
+        clearInterval(timer);
+      }
+    },
+    cancel() {
+      clearInterval(timer);
+    }
+  });
+}
+
 async function handleEvent(event) {
   const path = route(event);
   if (event.httpMethod === "OPTIONS") return json(204, {});
@@ -62,7 +88,7 @@ async function handleEvent(event) {
       const htmlError = /^\s*<(?:!doctype|html)/i.test(rawError);
       return json(htmlError ? 502 : upstream.status, { error: htmlError ? "上游返回了 HTML 错误页" : parseError(rawError), errorType: htmlError ? "HTML_ERROR_PAGE" : "UPSTREAM_API_ERROR", upstreamStatus: upstream.status });
     }
-    if (contentType.includes("text/event-stream") && upstream.body) return new Response(upstream.body, { status: 200, headers: { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-cache, no-transform", connection: "keep-alive", "x-model": model } });
+    if (contentType.includes("text/event-stream") && upstream.body) return new Response(keepAliveStream(upstream.body), { status: 200, headers: { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-cache, no-transform", connection: "keep-alive", "x-model": model } });
       const upstreamRaw = await upstream.text();
       if (/^\s*<(?:!doctype|html)/i.test(upstreamRaw)) return json(502, { error: "上游返回了 HTML 错误页", errorType: "HTML_ERROR_PAGE" });
       let payload;
