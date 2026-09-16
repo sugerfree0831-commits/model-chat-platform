@@ -44,7 +44,7 @@ function validate(body, raw) {
   return { baseUrl, apiKey, model, messages };
 }
 
-export const handler = async (event) => {
+async function handleEvent(event) {
   const path = route(event);
   if (event.httpMethod === "OPTIONS") return json(204, {});
   if (event.httpMethod === "GET" && (path === "/models" || event.queryStringParameters?.action === "models")) return json(200, { models: models() });
@@ -82,7 +82,7 @@ export default async function netlifyRequest(request) {
     queryStringParameters: Object.fromEntries(url.searchParams.entries()),
     body: request.method === "GET" || request.method === "HEAD" ? "" : await request.text()
   };
-  const result = await handler(event);
+  const result = await handleEvent(event);
   if (result instanceof Response) return result;
   return new Response(result.body || "", { status: result.statusCode || 200, headers: result.headers || JSON_HEADERS });
 }
