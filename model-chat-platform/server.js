@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { CONTENT_COPILOT_MODE, withContentCopilot } from "./lib/content-copilot.mjs";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 const publicDir = join(root, "public");
@@ -18,7 +19,8 @@ async function handler(req, res) {
     try {
       const data = await body(req); const base = String(data.baseUrl || "").trim().replace(/\/$/, ""); const key = String(data.apiKey || "").trim(); const model = String(data.model || "").trim(); const messages = Array.isArray(data.messages) ? data.messages.slice(-50) : [];
       if (!base || !key || !model || !messages.length) return json(res, 400, { error: "请填写接口地址、API Key、模型并发送消息", errorType: "INVALID_REQUEST" });
-      const response = await upstream(/\/chat\/completions$/.test(base) ? base : `${base}/chat/completions`, { model, messages, temperature: Number.isFinite(+data.temperature) ? +data.temperature : 0.7, max_tokens: Number.isFinite(+data.maxTokens) ? +data.maxTokens : 2048, stream: true }, key);
+      const requestMessages = withContentCopilot(messages, data.mode === CONTENT_COPILOT_MODE ? CONTENT_COPILOT_MODE : "");
+      const response = await upstream(/\/chat\/completions$/.test(base) ? base : `${base}/chat/completions`, { model, messages: requestMessages, temperature: Number.isFinite(+data.temperature) ? +data.temperature : 0.7, max_tokens: Number.isFinite(+data.maxTokens) ? +data.maxTokens : 2048, stream: true }, key);
       if (!response.ok) { const rawError = await response.text(); const htmlError = /^\s*<(?:!doctype|html)/i.test(rawError); return json(res, htmlError ? 502 : response.status, { error: htmlError ? "上游返回了 HTML 错误页" : rawError, errorType: htmlError ? "HTML_ERROR_PAGE" : "UPSTREAM_API_ERROR" }); }
       if ((response.headers.get("content-type") || "").includes("text/event-stream") && response.body) { res.writeHead(200, { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive" }); for await (const chunk of response.body) res.write(chunk); return res.end(); }
       const raw = await response.text(); if (/^\s*<(?:!doctype|html)/i.test(raw)) return json(res, 502, { error: "上游返回了 HTML 错误页", errorType: "HTML_ERROR_PAGE" }); const payload = JSON.parse(raw); return json(res, 200, { content: payload?.choices?.[0]?.message?.content || payload?.output_text || "", model: payload?.model || model, usage: payload?.usage || null });

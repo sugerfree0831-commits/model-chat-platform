@@ -1,4 +1,5 @@
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
+import { CONTENT_COPILOT_MODE, withContentCopilot } from "../../lib/content-copilot.mjs";
 const MAX_REQUEST_BYTES = 8 * 1024 * 1024;
 const UPSTREAM_TIMEOUT_MS = Number(process.env.UPSTREAM_TIMEOUT_MS || 110000);
 export const config = { stream: true };
@@ -41,7 +42,7 @@ function validate(body, raw) {
   const model = String(body.model || "").trim();
   const messages = Array.isArray(body.messages) ? body.messages.slice(-50) : [];
   if (!baseUrl || !apiKey || !model || !messages.length) throw typedError("请完善接口地址、API Key 和模型", "INVALID_REQUEST");
-  return { baseUrl, apiKey, model, messages };
+  return { baseUrl, apiKey, model, messages, mode: body.mode === CONTENT_COPILOT_MODE ? CONTENT_COPILOT_MODE : "" };
 }
 
 function keepAliveStream(body) {
@@ -79,9 +80,9 @@ async function handleEvent(event) {
   let body;
   try { body = JSON.parse(raw); } catch { return json(400, { error: "请求格式无效", errorType: "INVALID_REQUEST" }); }
   try {
-    const { baseUrl, apiKey, model, messages } = validate(body, raw);
+    const { baseUrl, apiKey, model, messages, mode } = validate(body, raw);
     const endpoint = /\/chat\/completions$/.test(baseUrl) ? baseUrl : `${baseUrl}/chat/completions`;
-    const upstream = await fetchUpstream(endpoint, { model, messages, temperature: Number.isFinite(+body.temperature) ? +body.temperature : 0.7, max_tokens: Number.isFinite(+body.maxTokens) ? +body.maxTokens : 4096, stream: true }, apiKey);
+    const upstream = await fetchUpstream(endpoint, { model, messages: withContentCopilot(messages, mode), temperature: Number.isFinite(+body.temperature) ? +body.temperature : 0.7, max_tokens: Number.isFinite(+body.maxTokens) ? +body.maxTokens : 4096, stream: true }, apiKey);
     const contentType = upstream.headers.get("content-type") || "";
     if (!upstream.ok) {
       const rawError = await upstream.text();

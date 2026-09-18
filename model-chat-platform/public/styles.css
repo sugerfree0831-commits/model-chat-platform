@@ -7,6 +7,8 @@ select{width:100%;padding:10px;border:1px solid #d1d1d6;border-radius:9px;margin
 @media(max-width:600px){.layout{padding:0}.layout>main{border-radius:0;border:0}.messages{padding:20px}.composer{padding:12px}}
 .attach{width:42px;height:48px;border:1px solid rgba(255,255,255,.85);border-radius:14px;background:rgba(255,255,255,.7);font-size:24px;color:#6870df;cursor:pointer}.fileChip{display:inline-block;padding:5px 9px;border-radius:9px;background:#eef0ff;color:#565bd0;font-size:12px;margin-bottom:8px}
 .composer{align-items:flex-end}.composer .attach{display:grid;place-items:center;flex:0 0 46px;padding:0;font-size:20px;color:#6269dc;background:rgba(255,255,255,.78);box-shadow:0 8px 18px #74729c18}.composer textarea{min-width:0}
+.workspaceStatus{display:flex;align-items:center;gap:8px}
+.modeBadge{padding:6px 9px;border:1px solid rgba(103,105,218,.16);border-radius:999px;background:rgba(235,235,255,.72);color:#5b5dc5;font-size:11px;font-weight:650;white-space:nowrap}
 .connection{margin-right:6px}
 .attachActions{display:flex;gap:6px;flex:0 0 auto}.attachActions .attach{width:42px}.composerBody{display:flex;flex-direction:column;flex:1;min-width:0}.fileChip{min-height:0;margin:0 0 5px}.fileChip:empty{display:none}
 
@@ -16,3 +18,169 @@ select{width:100%;padding:10px;border:1px solid #d1d1d6;border-radius:9px;margin
 .layout{overflow:hidden}.layout>aside{min-height:0;overflow:auto}.layout>main{min-height:0;overflow:hidden}.content{min-height:0}
 .composer textarea{min-height:58px;max-height:180px;font-size:16px;line-height:1.55;overflow-y:auto}
 @media(max-width:600px){.composer textarea{min-height:54px;font-size:16px}}
+
+/* Unified message composer */
+.composerWrap{
+  padding:14px 10% 22px;
+  background:linear-gradient(180deg,rgba(251,251,253,0),rgba(251,251,253,.86) 36%);
+}
+.composer{
+  position:relative;
+  display:block;
+  padding:10px;
+  border:1px solid rgba(199,201,214,.78);
+  border-radius:18px;
+  background:rgba(255,255,255,.9);
+  box-shadow:0 10px 30px rgba(51,53,78,.1),0 1px 2px rgba(51,53,78,.05);
+  transition:border-color .18s ease,box-shadow .18s ease,background .18s ease;
+}
+.composer:focus-within{
+  border-color:#7779e8;
+  background:#fff;
+  box-shadow:0 0 0 3px rgba(104,105,224,.12),0 12px 34px rgba(51,53,78,.12);
+}
+.composer textarea{
+  display:block;
+  width:100%;
+  min-height:58px;
+  max-height:180px;
+  margin:0;
+  padding:8px 10px 12px;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  box-shadow:none;
+  color:#272830;
+  font-size:15px;
+  line-height:1.55;
+  letter-spacing:0;
+  resize:none;
+  overflow-y:auto;
+}
+.composer textarea::placeholder{color:#9a9ca8}
+.composer textarea:focus{outline:0;border:0;box-shadow:none}
+.composerBar,.attachActions,.sendActions{display:flex;align-items:center}
+.composerBar{justify-content:space-between;gap:14px;min-height:38px}
+.attachActions{gap:4px;min-width:0}
+.sendActions{gap:12px;flex:0 0 auto}
+.composer .iconButton{
+  display:grid;
+  place-items:center;
+  flex:0 0 34px;
+  width:34px;
+  height:34px;
+  padding:0;
+  border:0;
+  border-radius:9px;
+  background:transparent;
+  box-shadow:none;
+  color:#5f6270;
+  cursor:pointer;
+}
+.composer .iconButton:hover{background:#f0f1f5;color:#343642}
+.composer .iconButton:focus-visible,.attachmentRemove:focus-visible,#send:focus-visible{outline:3px solid rgba(105,106,224,.25);outline-offset:1px}
+.iconButton svg,#send svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.formatHint,.keyHint{color:#8b8d99;font-size:11px;line-height:1.4;white-space:nowrap}
+.composer #send{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  width:auto;
+  height:38px;
+  padding:0 14px;
+  border:0;
+  border-radius:10px;
+  background:#6366e5;
+  box-shadow:0 5px 14px rgba(99,102,229,.24);
+  color:#fff;
+  font-size:13px;
+  font-weight:650;
+  cursor:pointer;
+  transition:background .18s ease,transform .18s ease,box-shadow .18s ease;
+}
+.composer #send:hover{background:#5558d7;box-shadow:0 6px 17px rgba(99,102,229,.3)}
+.composer #send:active{transform:translateY(1px)}
+.composer #send:disabled{background:#d8d9e1;box-shadow:none;color:#fff;cursor:not-allowed}
+.composer #send svg{width:16px;height:16px}
+.attachmentTray{display:flex;flex-wrap:wrap;gap:7px;padding:2px 2px 6px}
+.attachmentTray:empty{display:none}
+.attachmentItem{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+  max-width:260px;
+  height:38px;
+  padding:0 6px 0 8px;
+  border:1px solid #e2e3e9;
+  border-radius:9px;
+  background:#f8f8fa;
+  color:#3c3e49;
+}
+.fileType{
+  display:grid;
+  place-items:center;
+  flex:0 0 27px;
+  width:27px;
+  height:27px;
+  border-radius:7px;
+  background:#e8e9ef;
+  color:#646775;
+  font-size:9px;
+  font-weight:750;
+  text-transform:uppercase;
+}
+.fileType.image{background:#e7f5ec;color:#26764c}
+.fileType.markdown{background:#ecebfd;color:#5458b8}
+.fileType.pdf{background:#fbe9e7;color:#b64236}
+.fileType.word{background:#e7effc;color:#3469b5}
+.fileType.sheet{background:#e4f3e9;color:#247348}
+.fileType.slides{background:#fff0dc;color:#a65e18}
+.fileType.archive{background:#f2eaf8;color:#7b4a9c}
+.attachmentMeta{min-width:0;line-height:1.15}
+.attachmentName{display:block;overflow:hidden;color:#3a3c46;font-size:11px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
+.attachmentSize{display:block;margin-top:2px;color:#9496a0;font-size:9px}
+.composer .attachmentRemove{
+  display:grid;
+  place-items:center;
+  flex:0 0 26px;
+  width:26px;
+  height:26px;
+  padding:0;
+  border:0;
+  border-radius:7px;
+  background:transparent;
+  box-shadow:none;
+  color:#8e909a;
+  font-size:17px;
+  font-weight:400;
+  cursor:pointer;
+}
+.composer .attachmentRemove:hover{background:#e8e9ee;color:#3d3f48}
+.dropHint{
+  position:absolute;
+  inset:6px;
+  display:none;
+  place-items:center;
+  border:1.5px dashed #7678df;
+  border-radius:13px;
+  background:rgba(248,248,255,.97);
+  color:#5558cf;
+  font-size:14px;
+  font-weight:600;
+  z-index:2;
+}
+.composer.dragging .dropHint{display:grid}
+@media(max-width:1050px){.keyHint{display:none}}
+@media(max-width:900px){.formatHint{display:none}}
+@media(max-width:600px){
+  .composerWrap{padding:8px 10px 12px}
+  .composer{padding:8px;border-radius:15px}
+  .composer textarea{min-height:54px;padding:7px 8px 10px;font-size:16px}
+  .formatHint,.keyHint{display:none}
+  .composerBar{gap:8px}
+  .attachmentItem{max-width:100%}
+  .composer #send{height:36px;padding:0 12px}
+  .modeBadge{display:none}
+}
