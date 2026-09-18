@@ -1,7 +1,9 @@
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
 import { CONTENT_COPILOT_MODE, withContentCopilot } from "../../lib/content-copilot.mjs";
 const MAX_REQUEST_BYTES = 8 * 1024 * 1024;
-const UPSTREAM_TIMEOUT_MS = Number(process.env.UPSTREAM_TIMEOUT_MS || 110000);
+const DEFAULT_MAX_TOKENS = 8192;
+// Fail with a useful JSON error before a standard Netlify request reaches its hard timeout.
+const UPSTREAM_TIMEOUT_MS = Number(process.env.UPSTREAM_TIMEOUT_MS || 25000);
 export const config = { stream: true };
 const json = (statusCode, data, extraHeaders = {}) => ({ statusCode, headers: { ...JSON_HEADERS, ...extraHeaders }, body: JSON.stringify(data) });
 
@@ -10,6 +12,7 @@ function models() { try { return JSON.parse(process.env.TEAM_MODELS || "[{\"valu
 function transient(status) { return [502, 503, 504].includes(status); }
 function parseError(raw) { try { const data = JSON.parse(raw); return data?.error?.message || data?.error || data?.message || "模型接口调用失败"; } catch { return raw.slice(0, 1000) || "模型接口调用失败"; } }
 function typedError(message, code) { return Object.assign(new Error(message), { code }); }
+function outputTokenLimit(value) { const parsed = Math.floor(Number(value)); return Number.isFinite(parsed) ? Math.min(32000, Math.max(1, parsed)) : DEFAULT_MAX_TOKENS; }
 function errorPayload(error) {
   if (error?.code === "ATTACHMENT_TOO_LARGE") return { error: error.message, errorType: error.code };
   if (error?.code === "UPSTREAM_TIMEOUT" || error?.name === "AbortError") return { error: "上游模型响应超时，请减少附件或拆分复杂任务后重试。", errorType: "UPSTREAM_TIMEOUT" };
@@ -47,11 +50,11 @@ function validate(body, raw) {
 
 function keepAliveStream(body) {
   const encoder = new TextEncoder();
-  let timer;
+  let timer, reader;
   return new ReadableStream({
     async start(controller) {
-      const reader = body.getReader();
-      timer = setInterval(() => controller.enqueue(encoder.encode(": keep-alive\\n\\n")), 4000);
+      reader = body.getReader();
+      timer = setInterval(() => controller.enqueue(encoder.encode(": keep-alive\n\n")), 4000);
       try {
         while (true) {
           const { value, done } = await reader.read();
@@ -65,8 +68,9 @@ function keepAliveStream(body) {
         clearInterval(timer);
       }
     },
-    cancel() {
+    async cancel(reason) {
       clearInterval(timer);
+      try { await reader?.cancel(reason); } catch {}
     }
   });
 }
@@ -82,19 +86,19 @@ async function handleEvent(event) {
   try {
     const { baseUrl, apiKey, model, messages, mode } = validate(body, raw);
     const endpoint = /\/chat\/completions$/.test(baseUrl) ? baseUrl : `${baseUrl}/chat/completions`;
-    const upstream = await fetchUpstream(endpoint, { model, messages: withContentCopilot(messages, mode), temperature: Number.isFinite(+body.temperature) ? +body.temperature : 0.7, max_tokens: Number.isFinite(+body.maxTokens) ? +body.maxTokens : 4096, stream: true }, apiKey);
+    const upstream = await fetchUpstream(endpoint, { model, messages: withContentCopilot(messages, mode), temperature: Number.isFinite(+body.temperature) ? +body.temperature : 0.7, max_tokens: outputTokenLimit(body.maxTokens), stream: true }, apiKey);
     const contentType = upstream.headers.get("content-type") || "";
     if (!upstream.ok) {
       const rawError = await upstream.text();
       const htmlError = /^\s*<(?:!doctype|html)/i.test(rawError);
       return json(htmlError ? 502 : upstream.status, { error: htmlError ? "上游返回了 HTML 错误页" : parseError(rawError), errorType: htmlError ? "HTML_ERROR_PAGE" : "UPSTREAM_API_ERROR", upstreamStatus: upstream.status });
     }
-    if (contentType.includes("text/event-stream") && upstream.body) return new Response(keepAliveStream(upstream.body), { status: 200, headers: { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-cache, no-transform", connection: "keep-alive", "x-model": model } });
+    if (contentType.includes("text/event-stream") && upstream.body) return new Response(keepAliveStream(upstream.body), { status: 200, headers: { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-cache, no-transform", connection: "keep-alive", "x-accel-buffering": "no", "x-model": model } });
       const upstreamRaw = await upstream.text();
       if (/^\s*<(?:!doctype|html)/i.test(upstreamRaw)) return json(502, { error: "上游返回了 HTML 错误页", errorType: "HTML_ERROR_PAGE" });
       let payload;
       try { payload = JSON.parse(upstreamRaw); } catch { payload = {}; }
-    return json(200, { content: payload?.choices?.[0]?.message?.content || payload?.output_text || "", model: payload?.model || model, usage: payload?.usage || null });
+    return json(200, { content: payload?.choices?.[0]?.message?.content || payload?.output_text || "", model: payload?.model || model, finishReason: payload?.choices?.[0]?.finish_reason || payload?.stop_reason || null, usage: payload?.usage || null }, { "x-model": payload?.model || model });
   } catch (error) {
     return json(error?.code === "ATTACHMENT_TOO_LARGE" ? 413 : error?.code === "INVALID_REQUEST" ? 400 : 500, errorPayload(error));
   }

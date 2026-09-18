@@ -1,4 +1,4 @@
-# Model Hub
+# Chat Hub
 
 面向团队的 OpenAI 兼容模型对话工作台，支持本地 Node 和 Netlify 部署。
 
