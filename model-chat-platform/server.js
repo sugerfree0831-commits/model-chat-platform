@@ -7,7 +7,7 @@ import { CONTENT_COPILOT_MODE, withContentCopilot } from "./lib/content-copilot.
 const root = fileURLToPath(new URL(".", import.meta.url));
 const publicDir = join(root, "public");
 const mime = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8" };
-const DEFAULT_MAX_TOKENS = 8192;
+const DEFAULT_MAX_TOKENS = 32000;
 const timeoutMs = Number(process.env.UPSTREAM_TIMEOUT_MS || 110000);
 const transient = (status) => [502, 503, 504].includes(status);
 const outputTokenLimit = (value) => { const parsed = Math.floor(Number(value)); return Number.isFinite(parsed) ? Math.min(32000, Math.max(1, parsed)) : DEFAULT_MAX_TOKENS; };

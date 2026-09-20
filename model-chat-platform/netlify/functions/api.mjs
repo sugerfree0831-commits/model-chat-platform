@@ -1,7 +1,7 @@
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
 import { CONTENT_COPILOT_MODE, withContentCopilot } from "../../lib/content-copilot.mjs";
 const MAX_REQUEST_BYTES = 8 * 1024 * 1024;
-const DEFAULT_MAX_TOKENS = 8192;
+const DEFAULT_MAX_TOKENS = 32000;
 // Fail with a useful JSON error before a standard Netlify request reaches its hard timeout.
 const UPSTREAM_TIMEOUT_MS = Number(process.env.UPSTREAM_TIMEOUT_MS || 25000);
 export const config = { stream: true };

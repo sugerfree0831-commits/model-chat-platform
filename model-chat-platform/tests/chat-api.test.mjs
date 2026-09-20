@@ -49,7 +49,7 @@ test("Netlify stream uses the unified token default and preserves copilot attach
 
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("content-type"), "text/event-stream; charset=utf-8");
-  assert.equal(upstreamBody.max_tokens, 8192);
+  assert.equal(upstreamBody.max_tokens, 32000);
   assert.equal(upstreamBody.messages[0].role, "system");
   assert.deepEqual(upstreamBody.messages.at(-1), message);
   assert.match(stream, /"finish_reason":"length"/);
@@ -95,6 +95,6 @@ test("local server supports the same Netlify endpoint used by the browser", asyn
 
   assert.equal(response.status, 200);
   assert.equal(response.headers["x-model"], "gpt-test");
-  assert.equal(upstreamBody.max_tokens, 8192);
+  assert.equal(upstreamBody.max_tokens, 32000);
   assert.match(response.body, /data: \[DONE\]/);
 });
